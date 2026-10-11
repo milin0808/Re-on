@@ -1,0 +1,139 @@
+{
+  "meta": {
+    "input_moments": 20,
+    "generated_memories": 2,
+    "engine_version": "0.1.0",
+    "algorithm": "rules-v1"
+  },
+  "memories": [
+    {
+      "memory_id": "mem_4dd60bcf2b2b88a4",
+      "user_id": "demo_user_1",
+      "type": "ARTIST",
+      "title": "NCT 127과 함께한 7월",
+      "description": "7월에는 NCT 127의 음악을 8번 기록했어요. 해당 월 기록의 62%예요. 이 중 100%가 저녁 시간대 기록이에요. 메모에는 '공연', '집 가는 길' 표현이 반복됐어요.",
+      "period": {
+        "month": "2026-07",
+        "start": "2026-07-03",
+        "end": "2026-07-16"
+      },
+      "moment_ids": [
+        "1",
+        "2",
+        "3",
+        "5",
+        "6",
+        "7",
+        "9",
+        "10"
+      ],
+      "tracks": [
+        {
+          "track_id": null,
+          "artist": "NCT 127",
+          "song_title": "Fact Check"
+        },
+        {
+          "track_id": null,
+          "artist": "NCT 127",
+          "song_title": "질주"
+        },
+        {
+          "track_id": null,
+          "artist": "NCT 127",
+          "song_title": "영웅"
+        },
+        {
+          "track_id": null,
+          "artist": "NCT 127",
+          "song_title": "삐그덕"
+        },
+        {
+          "track_id": null,
+          "artist": "NCT 127",
+          "song_title": "Favorite"
+        },
+        {
+          "track_id": null,
+          "artist": "NCT 127",
+          "song_title": "Regular"
+        },
+        {
+          "track_id": null,
+          "artist": "NCT 127",
+          "song_title": "Cherry Bomb"
+        },
+        {
+          "track_id": null,
+          "artist": "NCT 127",
+          "song_title": "Superhuman"
+        }
+      ],
+      "context": {
+        "pattern_key": "nct 127",
+        "count": 8,
+        "total_in_month": 13,
+        "share": 0.6154,
+        "score": 0.68,
+        "dominant_time_band": "EVENING",
+        "dominant_time_ratio": 1.0,
+        "top_location": "체조경기장",
+        "repeated_memo_keywords": [
+          "공연",
+          "집 가는 길"
+        ]
+      }
+    },
+    {
+      "memory_id": "mem_cbd012b37f0f9862",
+      "user_id": "demo_user_1",
+      "type": "ARTIST",
+      "title": "IU와 함께한 8월",
+      "description": "8월에는 IU의 음악을 4번 기록했어요. 해당 월 기록의 57%예요. 이 중 100%가 밤 시간대 기록이에요.",
+      "period": {
+        "month": "2026-08",
+        "start": "2026-08-01",
+        "end": "2026-08-17"
+      },
+      "moment_ids": [
+        "14",
+        "15",
+        "17",
+        "18"
+      ],
+      "tracks": [
+        {
+          "track_id": null,
+          "artist": "IU",
+          "song_title": "밤편지"
+        },
+        {
+          "track_id": null,
+          "artist": "IU",
+          "song_title": "Love poem"
+        },
+        {
+          "track_id": null,
+          "artist": "IU",
+          "song_title": "팔레트"
+        },
+        {
+          "track_id": null,
+          "artist": "IU",
+          "song_title": "Celebrity"
+        }
+      ],
+      "context": {
+        "pattern_key": "iu",
+        "count": 4,
+        "total_in_month": 7,
+        "share": 0.5714,
+        "score": 0.5114,
+        "dominant_time_band": "NIGHT",
+        "dominant_time_ratio": 1.0,
+        "top_location": "집",
+        "repeated_memo_keywords": []
+      }
+    }
+  ]
+}
