@@ -9,6 +9,7 @@ from secrets import compare_digest
 from fastapi import Depends, FastAPI, Header, HTTPException
 
 from api_models import AnalysisRequest, AnalysisResponse
+from core_adapter import CoreAnalysisRequest, adapt_core_request
 from memory_generator import generate_memories
 from models import parse_moments
 from sync import annotate_changes
@@ -72,3 +73,18 @@ def analyze(request: AnalysisRequest) -> dict:
         },
         "memories": annotated,
     }
+
+
+@app.post("/api/v1/memories/analyze/core", response_model=AnalysisResponse,
+          dependencies=[Depends(verify_service_token)], tags=["analysis"])
+def analyze_from_core(request: CoreAnalysisRequest) -> dict:
+    """Accept proposed Core Moment envelopes with the real MusicResolveResponse fields.
+
+    NOTE: Spring Boot does not yet expose a Moment CRUD endpoint; this is an
+    integration-ready adapter, not a live database connection.
+    """
+    try:
+        normalized = adapt_core_request(request)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return analyze(normalized)

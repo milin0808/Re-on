@@ -201,4 +201,40 @@ $env:REON_ENGINE_TOKEN = "로컬테스트용-임의의-긴-비밀문자열"
 - 실제 DB 저장, Google OAuth 및 YouTube 재생목록 생성 **미구현** (Core Backend 담당)
 - 메모 감정·주제 이해, LLM 제목 생성 **미구현** (현재는 키워드+템플릿)
 - Memory 삭제/재생성, 아티스트 식별자 정규화, 시간대 변경 정책, 사용자 데이터 보안은 통합 과정에서 별도 처리 필요
-- **GitHub 저장소로 자동 업로드하지 않았습니다.** ZIP에 담긴 `memory-engine` 폴더를 프로젝트 개인 브랜치에 추가해 PR을 생성하세요.
+- **코드 공유:** 변경한 파일은 팀 GitHub의 개인 작업 브랜치에 커밋하고 `development`로 PR을 통해 반영하세요.
+
+
+## 10. Spring Boot 음악 조회 응답 어댑터 (호환 패치)
+
+**새 엔드포인트:** `POST /api/v1/memories/analyze/core`
+
+기존 `POST /api/v1/memories/analyze`는 변경하지 않았습니다. 새 엔드포인트는
+Spring Boot가 **실제로 구현한** `MusicResolveResponse` 필드
+`videoId`, `title`, `channelTitle`, `thumbnailUrl`을 포함한 Moment 배열을 입력받아
+현재 Memory Engine 입력 형식으로 변환합니다.
+
+- `videoId` → `track_id`
+- `title` → `song_title` (Moment에 `songTitle`이 있다면 그것을 우선 사용)
+- `channelTitle` → **자동으로 artist로 사용하지 않습니다.** `artist`를 별도로 전달하거나
+  `아티스트 - Topic` 형식의 채널명인 경우에만 후보 아티스트를 추출합니다.
+- `momentId`, `userId`, `recordedAt` → 기존 Moment ID/사용자/기록시간 필드.
+
+**주의:** 현재 Core Backend에는 음악 링크 조회만 구현되어 있고 Moment CRUD는 아직
+구현되지 않았습니다. 새 엔드포인트의 `momentId`, `userId`, `recordedAt`, `artist`,
+`music`을 묶은 외부 요청 형식은 **연동을 위해 제안한 예시**이지, 승환님의 기존
+Moment API 응답 스키마가 아닙니다. Moment CRUD가 완성되면 실제 DTO에 맞춰
+입력 Adapter만 조정하면 됩니다.
+
+### Swagger 테스트
+
+1. `run_server.bat`를 실행합니다.
+2. `http://127.0.0.1:8000/docs`에 접속합니다.
+3. `POST /api/v1/memories/analyze/core` → Try it out → `examples/core_request.json`의
+   전체 JSON을 붙여 넣고 Execute를 누릅니다.
+
+**아티스트가 확정되지 않은 경우** (예: `channelTitle: "SMTOWN"`인데 `artist` 미제공)
+`422`로 명시적으로 거부하여 잘못된 아티스트 추억 생성을 방지합니다. 관련
+아티스트는 사용자 입력 또는 신뢰 가능한 별도 메타데이터로 확정해야 합니다.
+
+기존 `examples/request.json`이나 `/api/v1/memories/analyze`는 그대로 사용할 수 있습니다.
+자세한 연동 계약은 `docs/SPRING_BOOT_INTEGRATION.md`를 확인하세요.

@@ -1,0 +1,68 @@
+{
+  "moments": [
+    {
+      "momentId": "1",
+      "userId": "demo_user_1",
+      "recordedAt": "2026-07-03T19:30:00+09:00",
+      "artist": "NCT127",
+      "songTitle": "Fact Check",
+      "music": {
+        "videoId": "TESTTRACK01",
+        "title": "Fact Check (Official Video)",
+        "channelTitle": "SMTOWN",
+        "thumbnailUrl": null
+      },
+      "location": "체조경기장",
+      "memo": "공연"
+    },
+    {
+      "momentId": "2",
+      "userId": "demo_user_1",
+      "recordedAt": "2026-07-05T20:10:00+09:00",
+      "music": {
+        "videoId": "TESTTRACK02",
+        "title": "질주",
+        "channelTitle": "NCT 127 - Topic",
+        "thumbnailUrl": null
+      },
+      "memo": "집 가는 길"
+    },
+    {
+      "momentId": "3",
+      "userId": "demo_user_1",
+      "recordedAt": "2026-07-10T18:40:00+09:00",
+      "artist": "NCT 127",
+      "music": {
+        "videoId": "TESTTRACK03",
+        "title": "영웅",
+        "channelTitle": "SMTOWN",
+        "thumbnailUrl": null
+      }
+    },
+    {
+      "momentId": "4",
+      "userId": "demo_user_1",
+      "recordedAt": "2026-07-12T19:10:00+09:00",
+      "artist": "아이유",
+      "music": {
+        "videoId": "TESTTRACK04",
+        "title": "밤편지",
+        "channelTitle": "IU - Topic",
+        "thumbnailUrl": null
+      }
+    },
+    {
+      "momentId": "5",
+      "userId": "demo_user_1",
+      "recordedAt": "2026-07-16T20:15:00+09:00",
+      "artist": "NCT 127",
+      "music": {
+        "videoId": "TESTTRACK05",
+        "title": "삐그덕",
+        "channelTitle": "SMTOWN",
+        "thumbnailUrl": null
+      }
+    }
+  ],
+  "existing_memories": []
+}
