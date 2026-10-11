@@ -1,0 +1,99 @@
+{
+  "userId": "demo_user_1",
+  "moments": [
+    {
+      "id": "1",
+      "createdAt": "2026-07-03T19:30:00+09:00",
+      "track": {
+        "title": "Fact Check",
+        "artist": "NCT 127",
+        "albumCoverUrl": null
+      },
+      "music": {
+        "videoId": "TESTTRACK01",
+        "title": "Fact Check (Official Video)",
+        "channelTitle": "SMTOWN",
+        "thumbnailUrl": null
+      },
+      "memo": "공연",
+      "location": "체조경기장"
+    },
+    {
+      "id": "2",
+      "createdAt": "2026-07-05T20:10:00+09:00",
+      "track": {
+        "title": "질주",
+        "artist": null,
+        "albumCoverUrl": null
+      },
+      "music": {
+        "videoId": "TESTTRACK02",
+        "title": "질주",
+        "channelTitle": "NCT 127 - Topic",
+        "thumbnailUrl": null
+      },
+      "memo": "집 가는 길",
+      "location": null
+    },
+    {
+      "id": "3",
+      "createdAt": "2026-07-10T18:40:00+09:00",
+      "track": {
+        "title": "영웅",
+        "artist": "NCT 127",
+        "albumCoverUrl": null
+      },
+      "music": {
+        "videoId": "TESTTRACK03",
+        "title": "영웅",
+        "channelTitle": "SMTOWN",
+        "thumbnailUrl": null
+      },
+      "memo": null,
+      "location": null
+    },
+    {
+      "id": "4",
+      "createdAt": "2026-07-12T19:10:00+09:00",
+      "track": {
+        "title": "밤편지",
+        "artist": "아이유",
+        "albumCoverUrl": null
+      },
+      "music": {
+        "videoId": "TESTTRACK04",
+        "title": "밤편지",
+        "channelTitle": "IU - Topic",
+        "thumbnailUrl": null
+      },
+      "memo": null,
+      "location": null
+    },
+    {
+      "id": "5",
+      "createdAt": "2026-07-16T20:15:00+09:00",
+      "track": {
+        "title": "삐그덕",
+        "artist": "NCT 127",
+        "albumCoverUrl": null
+      },
+      "music": {
+        "videoId": "TESTTRACK05",
+        "title": "삐그덕",
+        "channelTitle": "SMTOWN",
+        "thumbnailUrl": null
+      },
+      "memo": null,
+      "location": null
+    }
+  ],
+  "existing_memories": [],
+  "scope": {
+    "user_id": "demo_user_1",
+    "months": [
+      "2026-07"
+    ],
+    "complete_month_history": true,
+    "history_revision": 1
+  }
+}

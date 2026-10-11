@@ -2,7 +2,7 @@
 from collections import Counter
 import re
 import unicodedata
-from models import Moment
+from models import Moment, analysis_datetime
 
 MEMO_KEYWORDS = (
     "공연", "콘서트", "집 가는 길", "출근", "퇴근", "산책",
@@ -16,12 +16,11 @@ def canonical(text: str) -> str:
 
 
 def month_key(moment: Moment) -> str:
-    # Use the local date/time encoded by the Moment; don't convert to the server timezone.
-    return moment.recorded_at.strftime("%Y-%m")
+    return analysis_datetime(moment).strftime("%Y-%m")
 
 
 def time_band(moment: Moment) -> str:
-    hour = moment.recorded_at.hour
+    hour = analysis_datetime(moment).hour
     if 5 <= hour < 12:
         return "MORNING"
     if 12 <= hour < 18:
@@ -34,7 +33,8 @@ def time_band(moment: Moment) -> str:
 
 
 def display_label(values: list[str]) -> str:
-    return Counter(values).most_common(1)[0][0]
+    counts = Counter(values)
+    return min(counts, key=lambda label: (-counts[label], canonical(label), label))
 
 
 def extract_context(moments: list[Moment]) -> dict:

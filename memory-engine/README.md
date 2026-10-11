@@ -1,27 +1,13 @@
-# 🎧 RE:ON — FastAPI Memory Engine MVP v0.2
+# 🎧 RE:ON — Memory Engine v0.3.0
 
-**Moment(음악·시간·위치·메모) → 패턴 탐지 → Memory 자동 생성**을 담당하는 Python 기반 AI 백엔드 프로토타입입니다.
+Moment의 아티스트·시간·위치·메모를 분석하는 규칙 기반 FastAPI 서비스다.
+DB 저장과 사용자 인증은 Core Backend가 담당하며, 엔진은 분석 결과만 반환한다.
+현재 Core 브랜치에는 음악 조회만 구현되어 있다. 아래 Moment 전달·Memory 저장 계약은
+이번 엔진 패치의 계약이며, 구현된 Core Moment CRUD API를 뜻하지 않는다.
 
-> 이 단계는 **학습형 AI/LLM이 아닌 규칙 기반 패턴 분석 엔진**입니다. Spring Boot의 Moment DB·로그인·YouTube 연동과는 분리되어 있으며, HTTP API로 연결할 준비가 되어 있습니다.
+## 실행
 
-## 1. Windows에서 가장 쉽게 실행하기
-
-**준비물:** Python 3.10 이상 + 첫 실행 시 인터넷(라이브러리 설치용)
-
-1. ZIP 파일 압축을 풉니다.
-2. 압축 해제한 `memory-engine` 폴더에 들어갑니다.
-3. **`run_server.bat`를 더블클릭**합니다.
-   - 프로젝트별 가상 환경 `.venv` 생성 후 의존성 설치
-   - 주소 **http://127.0.0.1:8000** 으로 서버 시작
-4. 서버 창을 닫지 않은 채 브라우저에서 **http://127.0.0.1:8000/docs** 를 엽니다.
-5. Swagger UI의 `POST /api/v1/memories/analyze` → **Try it out** → `examples/request.json`의 내용을 붙여 넣어 **Execute**합니다.
-6. 또는 서버를 켠 상태에서 **`try_api.bat`** 를 더블클릭하면 예제 데이터를 API에 보내고 `outputs/api_response.json`으로 결과를 저장합니다.
-
-서버 종료: `run_server.bat` 창에서 `Ctrl+C`.
-
-> Windows에서 `.bat`가 실행되지 않으면 `py --version`으로 Python 설치 여부를 확인하세요. **처음 실행할 때만** `pip install`을 위한 인터넷이 필요합니다.
-
-## 2. Mac / Linux / 터미널 실행
+Windows: `run_server.bat` 실행 → <http://127.0.0.1:8000/docs>.
 
 ```bash
 cd memory-engine
@@ -29,212 +15,89 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
 python -m uvicorn api:app --host 127.0.0.1 --port 8000
-```
-
-API 문서: <http://127.0.0.1:8000/docs>
-
-다른 터미널에서 `python try_api.py` 또는 `curl`로 요청을 전송할 수 있습니다.
-
-```bash
-curl -X POST http://127.0.0.1:8000/api/v1/memories/analyze \
-  -H 'Content-Type: application/json' \
-  --data-binary @examples/request.json
-```
-
-오프라인 CLI 데모는 기존 그대로 동작합니다: `python main.py`. 결과: `outputs/memories.json`.
-
-## 3. API
-
-| Method | Endpoint | 동작 |
-| --- | --- | --- |
-| `GET` | `/health` | 서버 상태 / 버전 |
-| `GET` | `/docs` | Swagger API 문서 |
-| `POST` | `/api/v1/memories/analyze` | 한 사용자의 Moment 목록을 분석해 Memory와 변경 상태 반환 |
-
-**요청 예:**
-
-```json
-{
-  "moments": [
-    {
-      "moment_id": "1",
-      "user_id": "demo_user_1",
-      "artist": "NCT 127",
-      "song_title": "Fact Check",
-      "recorded_at": "2026-07-03T19:30:00+09:00",
-      "location": "체조경기장",
-      "memo": "집 가는 길",
-      "track_id": null
-    }
-  ],
-  "existing_memories": []
-}
-```
-
-`moments`는 **필수 배열**입니다. `moment_id`, `user_id`, `artist`, `song_title`, `recorded_at` 필수; `location`, `memo`, `track_id`는 선택입니다. 날짜는 **ISO 8601과 시간대(+09:00 또는 Z) 필수**입니다. 한 API 요청에서 다른 사용자들을 섞을 수 없으며, 같은 사용자에 중복된 `moment_id`가 있으면 `422`를 반환합니다. `moments`는 최대 1000개입니다.
-
-한 개의 Moment만으로는 패턴 임계치에 도달하지 않으므로 Memory 결과가 빈 배열인 게 정상입니다. 데모에서는 `examples/request.json`에 샘플 20개가 있습니다.
-
-**응답 예 (축약):**
-
-```json
-{
-  "meta": {
-    "input_moments": 20,
-    "generated_memories": 2,
-    "create_count": 2,
-    "update_count": 0,
-    "unchanged_count": 0,
-    "engine_version": "0.2.0",
-    "algorithm": "rules-v1"
-  },
-  "memories": [
-    {
-      "memory_id": "mem_...",
-      "user_id": "demo_user_1",
-      "type": "ARTIST",
-      "title": "NCT 127과 함께한 7월",
-      "description": "...",
-      "period": {"month": "2026-07", "start": "2026-07-03", "end": "2026-07-16"},
-      "moment_ids": ["1", "2", "3"],
-      "tracks": [{"track_id": null, "artist": "NCT 127", "song_title": "Fact Check"}],
-      "context": {"pattern_key": "nct 127", "count": 8},
-      "content_hash": "64자리 SHA-256 해시",
-      "sync_action": "CREATE"
-    }
-  ]
-}
-```
-
-위 응답은 **스키마 설명용 축약**이며 실제 반환 JSON은 `outputs/api_response.json` 또는 `examples/response.json`에 있습니다.
-
-## 4. 중요: 중복 생성 방지 방식
-
-이 엔진은 **상태를 저장하지 않는(stateless) 서비스**입니다. *Memory ID와 콘텐츠 해시를 안정적으로 생성하지만 DB에 저장하지는 않습니다.* **Spring Boot가 DB에 `memory_id` UNIQUE 제약을 적용하고 upsert해야** 재시도/동시 요청 상황에서도 실제 중복 저장을 방지할 수 있습니다.
-
-1. Spring Boot가 해당 사용자의 Moment들을 조회합니다.
-2. 같은 사용자의 DB에 존재하는 Memory 각각에서 `memory_id`와 `content_hash`를 읽어 `existing_memories`에 첨부합니다.
-3. FastAPI가 각 Memory에 아래 상태를 표시합니다.
-   - `CREATE`: DB 스냅샷에 해당 ID가 없을 때
-   - `UPDATE`: ID는 있지만 내용이 바뀌었거나 해시가 제공되지 않았을 때
-   - `UNCHANGED`: ID와 해시가 모두 같을 때
-4. Spring Boot는 `CREATE` / `UPDATE`를 **memory_id 기준 upsert** 하고, `UNCHANGED`는 건너뜁니다.
-
-**예시: 동일한 Memory가 이미 DB에 존재하는 경우의 다음 요청**
-
-```json
-{
-  "moments": ["(기존과 동일한 실제 Moment 객체들)"],
-  "existing_memories": [
-    {"memory_id": "mem_실제반환ID", "content_hash": "실제반환된64자리해시"}
-  ]
-}
-```
-
-> 위의 `moments` 문자열은 설명용 표현이며 유효한 API 입력은 아닙니다. 실제 요청에는 Moment 객체 배열을 보내세요.
->
-> `existing_memories`를 생략하면 **매 요청이 CREATE로 표시됩니다**. 이 API 단독으로는 DB 중복 저장을 막지 못합니다. 권장 호출·DB 정책은 `docs/SPRING_BOOT_INTEGRATION.md` 참고.
-
-**중요한 처리 정책:** 패턴이 사라진 Memory를 엔진이 자동 삭제하지는 않습니다. 사용자 삭제/비노출/갱신 주기는 별도의 백엔드 정책입니다. API 호출 시 **대상 기간에 필요한 전체 Moment**를 전송해야 통계가 왜곡되지 않습니다.
-
-## 5. 패턴 탐지 기준 (초기 실험값)
-
-| 유형 | 기본 조건 |
-| --- | --- |
-| 아티스트 `ARTIST` | 같은 달 동일 아티스트 3회 이상 + 해당 월 40% 이상 |
-| 장소 `LOCATION` | 같은 달 동일 위치 3회 이상 + 해당 월 50% 이상 |
-| 시간대 `TIME` | 같은 달 동일 시간대 4회 이상 + 해당 월 65% 이상 |
-
-기본 우선순위: `ARTIST → LOCATION → TIME` / 사용자·월별 최대 3개 / Moment 중복도가 큰 후보 제외. 설명은 데이터에서 확인한 사실만 사용합니다. 상세 규칙은 `pattern_detector.py`.
-
-## 6. 테스트
-
-Windows: **`run_tests.bat`** 더블클릭
-
-Mac/Linux/PowerShell:
-
-```bash
 python -m unittest discover -s tests -v
 ```
 
-- 기존 엔진 테스트 16개 + FastAPI 테스트 15개 = **31개**
-- 데이터 검증, 시간대 누락, 사용자 혼합 거부, 안정적 ID, 중복 비교, 변경 시 업데이트, API 토큰 인증, Swagger 스키마를 테스트합니다.
+CLI 데모는 `python main.py`, API 예제 호출은 서버 실행 후 `python try_api.py`다.
 
-## 7. 주요 파일
+## 엔드포인트
 
-```text
-memory-engine/
-  api.py                   # GET /health, POST /api/v1/memories/analyze
-  api_models.py            # Pydantic 입출력 스키마
-  sync.py                  # SHA-256 내용 해시 및 CREATE/UPDATE/UNCHANGED
-  models.py                # Moment 입력 검증
-  context_analyzer.py      # Context 분석
-  pattern_detector.py      # 규칙 기반 패턴 탐지
-  memory_generator.py      # Memory 생성
-  main.py                  # 기존 CLI 프로토타입
-  requirements.txt         # FastAPI/Uvicorn/Pydantic/httpx
-  data/sample_moments.json
-  examples/request.json    # Swagger/HTTP 실험용 샘플
-  examples/response.json   # 실제 샘플 응답
-  tests/test_memory.py
-  tests/test_api.py
-  run_server.bat
-  try_api.bat / try_api.py
-  run_tests.bat
-  docs/SPRING_BOOT_INTEGRATION.md
-```
+| Method | 경로 | 입력 |
+| --- | --- | --- |
+| GET | `/health` | 상태·버전 |
+| POST | `/api/v1/memories/analyze` | 엔진 형식: `moment_id`, `user_id`, `recorded_at` 등 |
+| POST | `/api/v1/memories/analyze/core` | 현재 Core 음악 DTO 및 프론트 Moment 필드 |
 
-## 8. 보안 및 배포
+예제: `examples/request.json`, `examples/core_request.json`,
+`examples/frontend_request.json`, `examples/scoped_request.json`.
+실제 샘플 응답: `examples/response.json`.
 
-로컬 실험용 실행은 `127.0.0.1`에만 바인딩합니다. **공용 인터넷에 토큰 없이 절대 노출하지 마세요.** 운영 환경에서는 개인 네트워크로 연결하고, `REON_ENGINE_TOKEN` 환경 변수를 설정해 내부 서비스 토큰을 검증하며 HTTPS/프록시 인증 및 사용자별 권한 검사를 Spring Boot에서 처리하세요. 샘플은 가상 데이터이며 실제 사용자의 위치·메모·토큰을 Git에 넣지 마세요.
+## 이번 패치의 기준
 
-PowerShell(서버 실행 전에 설정):
+- 월·시간대·기간은 **Asia/Seoul(UTC+09:00)**로 계산한다. 같은 시각의 `Z`와 `+09:00`는 같은 결과다.
+- 프론트 `id`, `createdAt`, `track.title`, `track.artist`, `track.albumCoverUrl`을 받는다.
+  Core는 인증된 사용자 ID를 요청의 `userId` 또는 각 Moment의 `userId`로 채운다.
+- Core `music`은 기존 `videoId`, `title`, `channelTitle`, `thumbnailUrl`을 그대로 받는다.
+- `artist`를 별도의 별칭 사전으로 바꾸지 않는다. 전달된 표기를 유지하며, 공통 분석 단계에서
+  Unicode NFKC·대소문자·공백 차이만 비교용으로 정규화한다.
+  `아이유`와 `IU`, `NCT127`과 `NCT 127`은 별개의 표기다. 같은 아티스트를 묶으려면
+  Core에서 일관된 artist 값을 보내야 한다. 엔진 입력 명칭을 프론트에 강요하지 않는다.
+- 아티스트가 없으면 null로 처리한다. 일반 채널명(SMTOWN/1theK 등)을 artist로 사용하지 않는다.
+  `이름 - Topic` 채널만 임시 fallback으로 사용한다. 미확정 곡도 시간·위치 분석과 월 전체 분모에 포함한다.
+- `track_id`/`videoId`는 11자리 YouTube ID 또는 null이다. 형식 검증은 영상 존재나 재생 가능성을 보장하지 않는다.
+- 반환 `tracks`에는 ID가 있는 곡만 넣고 ID로 중복을 제거한다. 원본 기록은 `moment_ids`에 모두 남는다.
+  `replay_available`은 사용 가능한 ID가 하나 이상 있다는 뜻이다. 실제 곡 추가 실패는 Core가 처리한다.
+- 잘못된 ID(불리언·실수), 중복 Moment, 사용자 혼합, 시간대 없는 날짜는 422다.
+
+## 패턴 기준
+
+| 유형 | 조건 |
+| --- | --- |
+| ARTIST | 같은 달 동일 아티스트 3회 이상 + 월 전체 기록의 40% 이상 |
+| LOCATION | 같은 달 동일 위치 3회 이상 + 월 전체 기록의 50% 이상 |
+| TIME | 같은 달 동일 시간대 4회 이상 + 월 전체 기록의 65% 이상 |
+
+ARTIST → LOCATION → TIME 우선순위, 사용자·월별 최대 3개, 유사 후보 제외.
+메모는 반복 키워드를 보조 Context로 사용한다. 학습형 AI/LLM은 아직 없다.
+
+## 저장·수정·삭제 계약
+
+- `memory_id`와 `content_hash`로 `CREATE` / `UPDATE` / `UNCHANGED`를 반환한다.
+- Core는 memory_id UNIQUE + upsert를 사용한다. 엔진은 DB에 직접 쓰지 않는다.
+- Moment 삭제나 월 이동으로 패턴이 사라질 때 `deactivated_memory_ids`를 반환할 수 있다.
+  Core는 해당 Memory를 `is_active=false`로 갱신하고 조회·RE:PLAY에서 제외한다.
+- 비활성화는 **명시적 scope + 완전한 월별 데이터 + 소유자/월이 있는 기존 Memory 스냅샷**에만 적용한다.
+  scope를 생략하면 기존 호환 동작으로 분석·upsert 결과만 반환하고 비활성화를 지시하지 않는다.
+- scope에는 `user_id`, `months`, `complete_month_history: true`, `history_revision`이 필요하다.
+  기존 Memory에는 `user_id`, `period_month`, `memory_id`, `content_hash`, `is_active`를 보낸다.
+- 응답의 scope/history_revision은 입력을 되돌려준다. **Core가 DB의 최신 revision을 원자적으로 비교해야**
+  오래된 응답의 덮어쓰기를 막는다. 엔진 자체가 동시 요청 순서를 보장하지는 않는다.
+- inactive Memory가 다시 생성되면 `is_active:false` 스냅샷에 대해 UPDATE를 반환한다.
+  Core는 CREATE/UPDATE를 반영할 때 `is_active=true`로 설정한다.
+- 요청 최대 1,000 Moments / 1,000 existing_memories, scope 최대 120개월.
+  여러 달은 월별로 나눠 호출하되, 한 달을 페이지별로 따로 분석하면 안 된다.
+  한 달 자체가 제한을 넘으면 서버 제한을 조정해야 하며 일부 기록을 complete라고 보내면 안 된다.
+
+정확한 요청과 DB 반영 순서는 `docs/SPRING_BOOT_INTEGRATION.md`에 있다.
+
+## 내부 인증
+
+로컬 실행 기본 주소는 127.0.0.1이다. 서버 간 사용 시 OS 환경변수에 ASCII 서비스 토큰을 설정한다.
+`.env.example`은 참고용이며 자동 로딩하지 않는다.
 
 ```powershell
-$env:REON_ENGINE_TOKEN = "로컬테스트용-임의의-긴-비밀문자열"
+$env:REON_ENGINE_TOKEN = "replace-with-a-random-ascii-service-secret"
 ```
 
-이 경우 `X-Service-Token` 헤더를 보내야 분석 API 접근이 허용됩니다. `GET /health`는 상태 점검용으로 인증되지 않습니다.
+Core는 `X-Service-Token` 헤더를 보낸다. 잘못된 요청 토큰은 401,
+빈 문자열·비ASCII 서버 설정은 503이다. 토큰 미설정은 로컬 개발 모드이므로
+외부 배포 시 반드시 토큰과 내부 네트워크 구성을 적용한다.
 
-## 9. 현 단계의 한계
+## 검증
 
-- 실제 DB 저장, Google OAuth 및 YouTube 재생목록 생성 **미구현** (Core Backend 담당)
-- 메모 감정·주제 이해, LLM 제목 생성 **미구현** (현재는 키워드+템플릿)
-- Memory 삭제/재생성, 아티스트 식별자 정규화, 시간대 변경 정책, 사용자 데이터 보안은 통합 과정에서 별도 처리 필요
-- **코드 공유:** 변경한 파일은 팀 GitHub의 개인 작업 브랜치에 커밋하고 `development`로 PR을 통해 반영하세요.
+기존 테스트 42개 + 회귀 테스트 18개, 총 **60개**.
+시간 변환, 프론트/Core 입력, 아티스트 미확정, 토큰 예외, 잘못된 ID,
+곡 ID 중복, 범위별 비활성화와 재활성화를 검사한다.
 
-
-## 10. Spring Boot 음악 조회 응답 어댑터 (호환 패치)
-
-**새 엔드포인트:** `POST /api/v1/memories/analyze/core`
-
-기존 `POST /api/v1/memories/analyze`는 변경하지 않았습니다. 새 엔드포인트는
-Spring Boot가 **실제로 구현한** `MusicResolveResponse` 필드
-`videoId`, `title`, `channelTitle`, `thumbnailUrl`을 포함한 Moment 배열을 입력받아
-현재 Memory Engine 입력 형식으로 변환합니다.
-
-- `videoId` → `track_id`
-- `title` → `song_title` (Moment에 `songTitle`이 있다면 그것을 우선 사용)
-- `channelTitle` → **자동으로 artist로 사용하지 않습니다.** `artist`를 별도로 전달하거나
-  `아티스트 - Topic` 형식의 채널명인 경우에만 후보 아티스트를 추출합니다.
-- `momentId`, `userId`, `recordedAt` → 기존 Moment ID/사용자/기록시간 필드.
-
-**주의:** 현재 Core Backend에는 음악 링크 조회만 구현되어 있고 Moment CRUD는 아직
-구현되지 않았습니다. 새 엔드포인트의 `momentId`, `userId`, `recordedAt`, `artist`,
-`music`을 묶은 외부 요청 형식은 **연동을 위해 제안한 예시**이지, 승환님의 기존
-Moment API 응답 스키마가 아닙니다. Moment CRUD가 완성되면 실제 DTO에 맞춰
-입력 Adapter만 조정하면 됩니다.
-
-### Swagger 테스트
-
-1. `run_server.bat`를 실행합니다.
-2. `http://127.0.0.1:8000/docs`에 접속합니다.
-3. `POST /api/v1/memories/analyze/core` → Try it out → `examples/core_request.json`의
-   전체 JSON을 붙여 넣고 Execute를 누릅니다.
-
-**아티스트가 확정되지 않은 경우** (예: `channelTitle: "SMTOWN"`인데 `artist` 미제공)
-`422`로 명시적으로 거부하여 잘못된 아티스트 추억 생성을 방지합니다. 관련
-아티스트는 사용자 입력 또는 신뢰 가능한 별도 메타데이터로 확정해야 합니다.
-
-기존 `examples/request.json`이나 `/api/v1/memories/analyze`는 그대로 사용할 수 있습니다.
-자세한 연동 계약은 `docs/SPRING_BOOT_INTEGRATION.md`를 확인하세요.
+Google 로그인, Moment CRUD, DB 저장·조회, YouTube OAuth/Playlist는 Core 담당이며
+실제 서비스 통합은 해당 기능 구현 후 검증해야 한다.

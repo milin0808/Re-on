@@ -57,14 +57,16 @@ def detect_patterns(moments: list[Moment], config: DetectionConfig | None = None
         location_groups: dict[str, list[Moment]] = defaultdict(list)
         time_groups: dict[str, list[Moment]] = defaultdict(list)
         for m in month_moments:
-            artist_groups[canonical(m.artist)].append(m)
+            # Unknown artists still count toward the month's total and other contexts.
+            if m.artist:
+                artist_groups[canonical(m.artist)].append(m)
             if m.location:
                 location_groups[canonical(m.location)].append(m)
             time_groups[time_band(m)].append(m)
 
         for key, group in artist_groups.items():
             if len(group) >= cfg.artist_min_count and len(group) / total >= cfg.artist_min_share:
-                label = display_label([m.artist for m in group])
+                label = display_label([m.artist for m in group if m.artist])
                 possibles.append(_candidate(user_id, month, "ARTIST", key, label, group, total))
 
         for key, group in location_groups.items():

@@ -1,18 +1,18 @@
 """Convert scored pattern candidates to RE:ON Memory JSON objects."""
 from hashlib import sha256
-from context_analyzer import TIME_LABELS, canonical, extract_context
-from models import Moment
+from context_analyzer import TIME_LABELS, extract_context
+from models import Moment, analysis_datetime
 from pattern_detector import Candidate, DetectionConfig, detect_patterns
 
 
 def _tracks(moments: tuple[Moment, ...]) -> list[dict]:
     result: list[dict] = []
-    seen: set[tuple[str, ...]] = set()
+    seen: set[str] = set()
     for m in moments:
-        key = ("id", m.track_id) if m.track_id else ("title", canonical(m.artist), canonical(m.song_title))
-        if key in seen:
+        # RE:PLAY consumes verified-shape video IDs; unresolved Moments remain in moment_ids.
+        if not m.track_id or m.track_id in seen:
             continue
-        seen.add(key)
+        seen.add(m.track_id)
         result.append({"track_id": m.track_id, "artist": m.artist, "song_title": m.song_title})
     return result
 
@@ -58,7 +58,8 @@ def create_memory(candidate: Candidate) -> dict:
 
     key = f"{candidate.user_id}|{candidate.month}|{candidate.pattern_type}|{candidate.pattern_key}"
     mid = "mem_" + sha256(key.encode("utf-8")).hexdigest()[:16]
-    dates = [m.recorded_at.date().isoformat() for m in group]
+    dates = [analysis_datetime(m).date().isoformat() for m in group]
+    tracks = _tracks(group)
     return {
         "memory_id": mid,
         "user_id": candidate.user_id,
@@ -67,13 +68,15 @@ def create_memory(candidate: Candidate) -> dict:
         "description": desc,
         "period": {"month": candidate.month, "start": min(dates), "end": max(dates)},
         "moment_ids": [m.moment_id for m in group],
-        "tracks": _tracks(group),
+        "tracks": tracks,
+        "replay_available": bool(tracks),
         "context": {
             "pattern_key": candidate.pattern_key,
             "count": count,
             "total_in_month": candidate.total_in_month,
             "share": candidate.share,
             "score": candidate.score,
+            "unresolved_track_moment_count": sum(m.track_id is None for m in group),
             **ctx,
         },
     }

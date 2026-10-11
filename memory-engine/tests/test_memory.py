@@ -91,7 +91,7 @@ class PatternTests(unittest.TestCase):
         self.assertEqual(len(generate_memories(items)), 1)
 
     def test_tracks_deduplicate_by_track_id(self):
-        items = [m(1, track_id="youtube-1"), m(2, track_id="youtube-1"), m(3, track_id="youtube-2")]
+        items = [m(1, track_id="TESTTRACK01"), m(2, track_id="TESTTRACK01"), m(3, track_id="TESTTRACK02")]
         result = generate_memories(items)
         self.assertEqual(len(result[0]["tracks"]), 2)
 

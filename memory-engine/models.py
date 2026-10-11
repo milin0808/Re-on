@@ -1,14 +1,26 @@
 """RE:ON Moment input schema and validation (Python 3.10+)."""
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+import re
 from typing import Any
+
+ENGINE_VERSION = "0.3.0"
+ALGORITHM = "rules-v2"
+ANALYSIS_TIMEZONE_NAME = "Asia/Seoul"
+# Korean MVP: fixed UTC+09:00, also works on Windows without a tzdata install.
+ANALYSIS_TIMEZONE = timezone(timedelta(hours=9), name=ANALYSIS_TIMEZONE_NAME)
+YOUTUBE_VIDEO_ID = re.compile(r"[A-Za-z0-9_-]{11}")
+
+
+def analysis_datetime(moment: "Moment") -> datetime:
+    return moment.recorded_at.astimezone(ANALYSIS_TIMEZONE)
 
 
 @dataclass(frozen=True)
 class Moment:
     moment_id: str
     user_id: str
-    artist: str
+    artist: str | None
     song_title: str
     recorded_at: datetime
     location: str | None = None
@@ -44,15 +56,18 @@ class Moment:
             raise ValueError(f"recorded_at은 ISO 8601 날짜/시간이어야 합니다: {raw_date}") from exc
         if dt.tzinfo is None or dt.utcoffset() is None:
             raise ValueError("recorded_at에는 시간대 정보가 필요합니다 (예: +09:00 또는 Z).")
+        track_id = optional("track_id")
+        if track_id is not None and not YOUTUBE_VIDEO_ID.fullmatch(track_id):
+            raise ValueError("track_id는 11자리 YouTube videoId 또는 null이어야 합니다.")
         return cls(
             moment_id=required("moment_id"),
             user_id=required("user_id"),
-            artist=required("artist"),
+            artist=optional("artist"),
             song_title=required("song_title"),
             recorded_at=dt,
             location=optional("location"),
             memo=optional("memo"),
-            track_id=optional("track_id"),
+            track_id=track_id,
         )
 
 

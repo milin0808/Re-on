@@ -2,7 +2,8 @@
 import argparse
 import json
 from pathlib import Path
-from models import parse_moments
+from models import ALGORITHM, ANALYSIS_TIMEZONE_NAME, ENGINE_VERSION, parse_moments
+from sync import annotate_changes
 from pattern_detector import DetectionConfig
 from memory_generator import generate_memories
 
@@ -33,9 +34,10 @@ def main() -> int:
         artist_min_share=args.artist_min_share,
         max_memories_per_month=args.max_per_month,
     )
-    memories = generate_memories(moments, config)
+    memories = annotate_changes(generate_memories(moments, config), {})
     result = {"meta": {"input_moments": len(moments), "generated_memories": len(memories),
-                       "engine_version": "0.1.0", "algorithm": "rules-v1"}, "memories": memories}
+                       "engine_version": ENGINE_VERSION, "algorithm": ALGORITHM,
+                       "analysis_timezone": ANALYSIS_TIMEZONE_NAME}, "memories": memories}
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"입력 Moment {len(moments)}개 → Memory {len(memories)}개 생성 완료")

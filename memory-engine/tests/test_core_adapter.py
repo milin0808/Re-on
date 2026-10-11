@@ -39,8 +39,8 @@ class CoreAdapterTests(unittest.TestCase):
         self.assertEqual(memory["tracks"][0]["track_id"], "TESTTRACK01")
 
     def test_explicit_artist_wins_over_channel(self):
-        self.assertEqual(normalize_artist("아이유", "SMTOWN"), "IU")
-        self.assertEqual(normalize_artist("NCT127", "SMTOWN"), "NCT 127")
+        self.assertEqual(normalize_artist("아이유", "SMTOWN"), "아이유")
+        self.assertEqual(normalize_artist("NCT127", "SMTOWN"), "NCT127")
 
     def test_topic_channel_is_accepted_when_artist_missing(self):
         self.assertEqual(normalize_artist(None, " IU - Topic "), "IU")
@@ -51,8 +51,10 @@ class CoreAdapterTests(unittest.TestCase):
         del body["moments"][0]["artist"]
         body["moments"][0]["music"]["channelTitle"] = "SMTOWN"
         result = self.post(body)
-        self.assertEqual(result.status_code, 422, result.text)
-        self.assertIn("artist", result.json()["detail"])
+        self.assertEqual(result.status_code, 200, result.text)
+        self.assertEqual(result.json()["meta"]["unknown_artist_moments"], 1)
+        artist_memories = [m for m in result.json()["memories"] if m["type"] == "ARTIST"]
+        self.assertTrue(all(m["context"]["pattern_key"] != "smtown" for m in artist_memories))
 
     def test_song_title_override_vs_youtube_title(self):
         body = copy.deepcopy(self.body)

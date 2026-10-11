@@ -1,195 +1,148 @@
-# RE:ON Spring Boot ↔ FastAPI 연결 가이드
+# Core Backend → Memory Engine 연결 계약 v0.3.0
 
-목표: Core Backend(Spring Boot)가 Moment 저장 후 Memory Engine을 호출하고, `memory_id`로 기존 Memory를 upsert한다.
+현재 `choiseunghwan` 브랜치에서 실제 구현된 API는 `POST /api/v1/music/resolve`이며
+응답은 `videoId`, `title`, `channelTitle`, `thumbnailUrl`이다.
+Core의 Moment CRUD·Memory 저장·조회 API는 아직 없다. 이 문서는 엔진 측 계약이다.
+외부 공개 API의 경로와 Entity/DTO는 Core가 확정하고, 엔진 어댑터는 그 DTO에 맞춘다.
 
-## 추천 연동 구조
+## 요청
 
-```text
-[Frontend Moment 저장]
-     |
-     v
-[Spring Boot POST /moments -> DB 저장 완료]
-     |
-     v
-[Spring Boot DB에서 user_id의 분석 대상 Moment 조회]
-     |
-     +----> [Spring Boot DB에서 같은 사용자 Memory ID + content_hash 조회]
-     |
-     v
-[POST http://memory-engine:8000/api/v1/memories/analyze]
-     |
-     v
-[FastAPI: 규칙 분석 → Memory + sync_action + content_hash 반환]
-     |
-     v
-[Spring Boot: CREATE/UPDATE는 memory_id 기준 UPSERT, UNCHANGED는 SKIP]
-     |
-     v
-[Frontend Memory 목록 조회 / RE:PLAY]
-```
+권장 내부 엔드포인트: `POST /api/v1/memories/analyze/core`.
+기존 `/api/v1/memories/analyze`도 계속 지원한다.
 
-**개발 환경:** `http://127.0.0.1:8000`으로 호출 (Spring Boot와 API가 같은 PC에서 실행되는 경우)
+| 현재 프론트 / Core | 엔진 내부 |
+| --- | --- |
+| `id` 또는 `momentId` | `moment_id` |
+| `createdAt` 또는 `recordedAt` | `recorded_at` |
+| Core가 채운 요청 `userId` / 개별 `userId` / `scope.user_id` | `user_id` |
+| 개별 `artist`, 없으면 `track.artist` | `artist` |
+| `songTitle`, 없으면 `track.title`, 없으면 `music.title` | `song_title` |
+| `music.videoId`, 없으면 `track.videoId` | `track_id` |
+| `location`, `memo` | 그대로 |
 
-**서버 분리 시:** 내부 DNS 및 서비스 전용 토큰/HTTPS를 사용. `127.0.0.1`은 호출하는 컨테이너/호스트 자신의 루프백이므로 컨테이너 간 통신에는 사용할 수 없음.
+`music`과 `track` 중 하나는 필수다. 둘 다 보내면 `music.videoId`를 사용하며,
+`track.videoId`도 있으면 두 ID가 같아야 한다. 프론트에는 없는 사용자 ID를
+Core가 로그인 인증 정보에서 채운다. 클라이언트의 임의 사용자 ID를 신뢰하지 않는다.
+썸네일/원본 메모 등 상세 화면 정보는 Core가 `moment_ids`로 원본 데이터를 결합한다.
 
-## Request 예시
+아티스트 표기는 프론트/Core 값을 유지한다. 엔진에는 임의 별칭 매핑이 없다.
+같은 아티스트의 서로 다른 언어 표기를 묶으려면 Core가 일관된 값을 확보해서 보낸다.
+아티스트가 없으면 null을 보낼 수 있다. 일반 channelTitle은 artist로 사용하지 않는다.
+` - Topic` fallback은 임시 처리이고, 별도 artist 값이 있으면 그것을 우선한다.
 
-자세한 실제 데이터는 `examples/request.json` 참고.
+`Z`와 `+09:00` 입력 모두 가능하다. 분석 월·시간대는 Asia/Seoul로 변환한다.
+프론트의 `createdAt`는 현재 기록 시각으로 연결한다. 추후 Core가 작성 시각과 기록 대상 시각을
+분리한다면 사용자가 수정하는 기록 대상 시각을 recordedAt로 매핑한다.
+
+## 사용자·월 범위 및 수정/삭제 반영
+
+운영 호출은 해당 사용자의 **완전한 월별 기록**과 명시적인 scope를 보낸다.
 
 ```json
 {
-  "moments": [
-    {
-      "moment_id": "123",
-      "user_id": "u123",
-      "artist": "IU",
-      "song_title": "밤편지",
-      "recorded_at": "2026-08-11T23:00:00+09:00",
-      "location": null,
-      "memo": "집 가는 길",
-      "track_id": null
-    }
-  ],
+  "userId": "u123",
+  "scope": {
+    "user_id": "u123",
+    "months": ["2026-07"],
+    "complete_month_history": true,
+    "history_revision": 17
+  },
+  "moments": [],
   "existing_memories": [
-    {"memory_id": "mem_이미저장된ID", "content_hash": null}
+    {
+      "memory_id": "mem_실제저장된ID",
+      "user_id": "u123",
+      "period_month": "2026-07",
+      "content_hash": null,
+      "is_active": true
+    }
   ]
 }
 ```
 
-- `user_id`: 인증받은 사용자 ID를 Spring Boot에서 세팅 (클라이언트 임의 값 그대로 신뢰하지 않기)
-- `artist`: API가 반환한 채널명을 그대로 넣기보다 정규화된 아티스트 이름 권장
-- `recorded_at`: 오프셋을 포함한 ISO 8601 (예: `+09:00` 또는 `Z`)
-- `location`은 동의 기반 수집이며 사용자에게 속한 데이터만 전송
-- `existing_memories`: Spring Boot의 실제 기존 DB 값으로 채우기
-- 전체 사용자 히스토리 또는 월별 완전한 기록 세트를 보내야 생성 임계치 통계가 유효함
+빈 moments는 이 사용자의 해당 월 기록이 전부 삭제된 경우에도 유효하다.
+동일한 사용자의 스냅샷만 보내며, scope 사용 시 user_id/period_month 없는 기존 Memory는 422다.
+다른 월의 스냅샷이 포함되어도 비활성화는 scope.months에 한정한다.
+월 이동 수정은 **기존 월과 변경된 월**을 재분석한다. 생성/수정/삭제의 DB 커밋 이후 호출한다.
 
-## 반환 결과
+기존 scope 없는 호출은 분석과 변경 상태 비교만 수행한다. 누락된 Memory를 비활성화하지 않는다.
+완전한 기록을 보장하지 못한 페이지나 최근 N개만 보내고 complete_month_history를 true로 표시하면 안 된다.
+요청당 1,000 Moments가 상한이다. 월별로 나눌 수 있지만 한 달의 기록이 1,000개를 넘으면
+제한을 조정하거나 별도 집계 경로를 구현해야 한다. 한 달을 여러 페이지로 분석하면 통계가 왜곡된다.
 
-`memories[]`의 `sync_action`이 `CREATE`/`UPDATE`라면 DB 저장 대상으로 보고, `UNCHANGED`는 건너뛰세요.
+## 응답과 Core의 DB 처리
 
-```text
-CREATE -> memory_id가 DB에 없다. insert/upsert.
-UPDATE -> 같은 memory_id가 있지만 내용 해시가 다르다. update/upsert.
-UNCHANGED -> 내용 해시도 동일하다. DB 변경 불필요.
-```
+| 응답 | Core 처리 |
+| --- | --- |
+| `CREATE` / `UPDATE` | memory_id UNIQUE 기준 upsert, content_hash 저장, is_active=true |
+| `UNCHANGED` | 내용 갱신 생략 |
+| `deactivated_memory_ids` | **동일 사용자·scope 월을 다시 확인**하고 is_active=false |
+| `scope.history_revision` | 최신 Moment 데이터 revision과 비교; 오래된 응답은 폐기 |
+| `replay_available=false` | 곡 ID 확보 전 RE:PLAY 불가로 처리 |
 
-**중요:** FastAPI는 DB에 접근하지 않습니다. `existing_memories`를 주지 않으면 매번 `CREATE`입니다.
+비활성화된 Memory는 목록/상세/RE:PLAY 대상에서 제외한다. 다시 패턴 조건을 충족하면
+같은 ID를 활성화한다. inactive 스냅샷은 is_active=false를 포함해야 하며,
+엔진은 같은 content_hash여도 UPDATE를 반환하여 재활성화할 수 있게 한다.
 
-**DB 제약 조건:** `memory_id`는 PK 또는 UNIQUE, 추가로 사용자별 조회 인덱스(user_id, period_month)를 권장합니다. 재시도·동시 요청 시 `sync_action`만으로는 원자적 중복 방지가 되지 않으므로 `memory_id` PK/UNIQUE 및 트랜잭션 처리가 필수입니다.
+권장 revision 규칙은 사용자별 Moment 생성·수정·삭제 때 단조 증가하는 정수다.
+Core는 분석 입력과 revision을 일관된 DB 스냅샷으로 읽고, 결과 적용 시
+사용자 행 lock 또는 조건부 갱신으로 revision 비교와 Memory 반영을 같은 트랜잭션에서 처리한다.
+revision이 다르면 결과를 반영하지 않고 최신 데이터로 재분석한다.
+엔진은 revision을 그대로 반환할 뿐, DB 상태나 작업 순서를 직접 검증하지 않는다.
 
-## Spring RestClient 호출 예시 (스케치)
+반환 tracks는 11자리 ID를 가진 항목만 포함하며 ID로 중복 제거한다.
+이 검증은 실제 영상 존재/권한/삭제 여부 검증이 아니다. Playlist 생성 시 Core가 실패한 곡을 처리한다.
+Moment는 곡 ID가 없어도 기록·분석할 수 있고, 모든 포함 기록은 moment_ids에 남는다.
 
-이미 Core Backend에 `spring-boot-starter-restclient` 의존성이 포함된 것으로 확인했습니다. 아래 코드는 **DTO/Repository/보안 처리 연결 전의 통신 샘플**이며 프로젝트에 그대로 붙여 넣는 완성형 서비스는 아닙니다.
+## Spring Boot 4.1 통신 예시
+
+현재 프로젝트는 Jackson 3을 기본 사용하므로 `tools.jackson.databind.JsonNode`를 사용한다.
+다음은 내부 HTTP 통신 예시이며 DTO/Repository/작업 큐 구현은 포함하지 않는다.
 
 ```java
+import java.time.Duration;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
-import com.fasterxml.jackson.databind.JsonNode;
-import java.util.Map;
+import tools.jackson.databind.JsonNode;
 
 public class MemoryEngineClient {
     private final RestClient client;
 
     public MemoryEngineClient(String baseUrl, String serviceToken) {
+        var factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(3));
+        factory.setReadTimeout(Duration.ofSeconds(10));
         this.client = RestClient.builder()
                 .baseUrl(baseUrl)
+                .requestFactory(factory)
                 .defaultHeader("X-Service-Token", serviceToken)
                 .build();
     }
 
-    public JsonNode analyze(Object momentDtos, Object existingMemoryDtos) {
+    public JsonNode analyze(Object requestDto) {
         return client.post()
-                .uri("/api/v1/memories/analyze")
+                .uri("/api/v1/memories/analyze/core")
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(Map.of("moments", momentDtos,
-                             "existing_memories", existingMemoryDtos))
+                .body(requestDto)
                 .retrieve()
                 .body(JsonNode.class);
     }
 }
 ```
 
-실제 서비스에서는 `RestClient`에 **연결/읽기 타임아웃**, 재시도 상한, 에러 로깅(개인정보 제외), 서비스 토큰 설정 관리가 추가되어야 합니다. 사용자별 DB transaction 및 unique upsert까지 연결한 후 통합 테스트하세요.
+같은 PC에서 개발할 때 baseUrl은 `http://127.0.0.1:8000`이다.
+컨테이너 간에는 서비스 DNS를 사용한다. 엔진을 다른 컨테이너에서 접근하려면
+내부 네트워크에서 0.0.0.0으로 바인딩하고 서비스 토큰을 설정한다.
+Moment 저장 성공과 분석 실패를 분리하고, 커밋 후 작업 처리·제한된 재시도를 Core에서 구현한다.
+서비스 토큰은 ASCII 임의 문자열을 OS 환경변수로 설정하며 `.env`는 자동 로딩되지 않는다.
 
-## Moment 저장 이벤트 처리 시 주의
+## 테스트 예제
 
-- 첫 MVP는 **Moment가 저장된 후 비동기로 Memory 분석 작업을 큐에 넣는 방식**을 권장합니다. 사용자가 노래 기록을 저장할 때 FastAPI 응답을 기다리도록 하면 분석 서버 오류가 Moment 저장 실패로 전파될 수 있습니다.
-- MVP 단순 구현이라면 Spring Boot 트랜잭션 커밋 이후 분석 호출 + 실패 시 재시도 정책으로 시작할 수 있습니다.
-- **단순히 `@Async`만 붙이면 서버 재시작 중 작업이 유실될 수 있으므로**, 운영에선 작업 큐 또는 주기적 재분석 보완을 권장합니다.
-- 삭제된 Moment나 변경된 Moment가 기존 Memory에 어떤 영향을 주는지 제품 정책을 별도로 정하세요. 엔진은 오래된 Memory를 삭제하라고 지시하지 않습니다.
-- Spring Boot 4 / Java 21 프로젝트의 실제 Entity와 DTO가 완성되면 그 이름에 맞게 JSON 매핑만 연결하면 됩니다.
+- `examples/core_request.json`: 기존 Core music 객체 + 제안된 Moment envelope.
+- `examples/frontend_request.json`: 현재 프론트 필드 + Core가 채운 userId/music.
+- `examples/scoped_request.json`: 완전한 월 범위 및 revision을 포함한 호출.
+- `examples/response.json`: 실제 기본 API 샘플 응답.
 
-
-## Spring Boot의 실제 음악 조회 DTO에 맞춘 어댑터 (2026-10-11 기준)
-
-승환님의 `choiseunghwan` 브랜치 `MusicResolveResponse`는 다음 4개 필드만 반환합니다.
-
-```json
-{
-  "videoId": "영상 ID",
-  "title": "YouTube 영상 제목",
-  "channelTitle": "YouTube 채널 이름",
-  "thumbnailUrl": "썸네일 URL 또는 null"
-}
-```
-
-**구현 완료된 API는 `POST /api/v1/music/resolve`뿐입니다.** Moment CRUD, 사용자 로그인,
-Memory 저장은 아직 미구현입니다. 따라서 아래 구조는 연동 전까지 테스트용 제안 형식이며,
-실제 Spring Boot의 Moment API 형식으로 확정된 것이 아닙니다.
-
-### FastAPI 어댑터 API
-
-기존 정규화 요청은 `POST /api/v1/memories/analyze`로 계속 보낼 수 있습니다.
-별도로 `POST /api/v1/memories/analyze/core`를 추가하여 Spring Boot의 음악 조회
-응답을 `music` 객체로 그대로 전달할 수 있도록 했습니다.
-
-```json
-{
-  "moments": [
-    {
-      "momentId": "123",
-      "userId": "u123",
-      "recordedAt": "2026-08-11T23:00:00+09:00",
-      "artist": "IU",
-      "songTitle": "밤편지",
-      "music": {
-        "videoId": "wJhWwt1OmT8",
-        "title": "YouTube 영상 제목",
-        "channelTitle": "YouTube 채널 이름",
-        "thumbnailUrl": null
-      },
-      "memo": "집 가는 길",
-      "location": null
-    }
-  ],
-  "existing_memories": []
-}
-```
-
-- 음악 메타데이터: `music.videoId → track_id`, `music.title → song_title`.
-- `songTitle`이 별도로 있으면 영상 제목 대신 사용합니다. YouTube `title`은
-  `(Official MV)` 등이 붙어 실제 곡명과 다를 수 있습니다.
-- 사용자·Moment 식별자 및 시간은 아직 **Core Moment API에 없는 필드**이므로
-  Moment DB 구현 후 반드시 채워야 합니다.
-- `artist`는 가능하면 정확한 아티스트 이름을 별도로 넣어야 합니다.
-  `channelTitle`은 일반적으로 아티스트가 아니므로 **자동으로 대체하지 않습니다**.
-  `IU - Topic`처럼 ` - Topic`으로 끝나는 채널명에 한해 임시 추출을 허용합니다.
-  `SMTOWN` 같은 채널명만 있으면 `422`가 반환됩니다. 임의의 아티스트 추론은 하지 않습니다.
-- 아티스트 별칭(현재 예: `아이유 ↔ IU`, `NCT127 ↔ NCT 127`)은
-  `core_adapter.py`의 `ARTIST_ALIASES`에서 관리하며, 확실한 매핑만 추가합니다.
-- 기존 API와 마찬가지로 `X-Service-Token` 인증, 사용자 혼합 제한,
-  저장용 `memory_id`/`content_hash` 처리 원칙이 동일하게 적용됩니다.
-- `examples/core_request.json`은 **가상 데이터**입니다. `TESTTRACKxx`는
-  예제용 임의 ID이지 실제 YouTube 영상을 뜻하지 않습니다.
-
-### 테스트
-
-```powershell
-cd memory-engine
-.\run_tests.bat
-.\run_server.bat
-```
-
-서버 실행 중 `http://127.0.0.1:8000/docs`의 `analyze/core`로
-`examples/core_request.json` 내용을 전송하면 됩니다. 실제 Spring Boot 연동은
-Moment CRUD 및 DB가 개발된 다음 진행해야 합니다.
+TESTTRACKxx ID는 형식 검사와 데모용 임의 값이며 실제 YouTube 영상을 뜻하지 않는다.
+사용자 로그인·DB·YouTube를 사용하는 통합 테스트는 Core 구현 후 수행한다.

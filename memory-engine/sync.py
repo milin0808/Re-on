@@ -27,3 +27,9 @@ def annotate_changes(generated: list[dict], existing: dict[str, str | None]) -> 
             action = "UPDATE"
         result.append({**original, "content_hash": digest, "sync_action": action})
     return result
+
+
+def missing_memory_ids(generated: list[dict], scoped_existing_ids: list[str]) -> list[str]:
+    """Core supplies only the authoritative user's explicitly complete month scopes."""
+    active = {memory["memory_id"] for memory in generated}
+    return sorted(set(scoped_existing_ids) - active)

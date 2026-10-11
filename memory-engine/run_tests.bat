@@ -17,4 +17,6 @@ if errorlevel 1 (
   exit /b 1
 )
 ".venv\Scripts\python.exe" -m unittest discover -s tests -v
+set "TEST_EXIT_CODE=%ERRORLEVEL%"
 pause
+exit /b %TEST_EXIT_CODE%

@@ -5,8 +5,12 @@
     "create_count": 2,
     "update_count": 0,
     "unchanged_count": 0,
-    "engine_version": "0.2.0",
-    "algorithm": "rules-v1"
+    "deactivate_count": 0,
+    "unknown_artist_moments": 0,
+    "unresolved_track_moments": 20,
+    "analysis_timezone": "Asia/Seoul",
+    "engine_version": "0.3.0",
+    "algorithm": "rules-v2"
   },
   "memories": [
     {
@@ -30,54 +34,15 @@
         "9",
         "10"
       ],
-      "tracks": [
-        {
-          "track_id": null,
-          "artist": "NCT 127",
-          "song_title": "Fact Check"
-        },
-        {
-          "track_id": null,
-          "artist": "NCT 127",
-          "song_title": "질주"
-        },
-        {
-          "track_id": null,
-          "artist": "NCT 127",
-          "song_title": "영웅"
-        },
-        {
-          "track_id": null,
-          "artist": "NCT 127",
-          "song_title": "삐그덕"
-        },
-        {
-          "track_id": null,
-          "artist": "NCT 127",
-          "song_title": "Favorite"
-        },
-        {
-          "track_id": null,
-          "artist": "NCT 127",
-          "song_title": "Regular"
-        },
-        {
-          "track_id": null,
-          "artist": "NCT 127",
-          "song_title": "Cherry Bomb"
-        },
-        {
-          "track_id": null,
-          "artist": "NCT 127",
-          "song_title": "Superhuman"
-        }
-      ],
+      "tracks": [],
+      "replay_available": false,
       "context": {
         "pattern_key": "nct 127",
         "count": 8,
         "total_in_month": 13,
         "share": 0.6154,
         "score": 0.68,
+        "unresolved_track_moment_count": 8,
         "dominant_time_band": "EVENING",
         "dominant_time_ratio": 1.0,
         "top_location": "체조경기장",
@@ -86,7 +51,7 @@
           "집 가는 길"
         ]
       },
-      "content_hash": "a34eee6057f1643691ec94717a97b2477b01c8744ba5629937a9f0e5ec74d96e",
+      "content_hash": "aad0a3e2afc0540ec79f95c44d18858aec5210ddda38c1a53dbac3558a26e158",
       "sync_action": "CREATE"
     },
     {
@@ -106,41 +71,24 @@
         "17",
         "18"
       ],
-      "tracks": [
-        {
-          "track_id": null,
-          "artist": "IU",
-          "song_title": "밤편지"
-        },
-        {
-          "track_id": null,
-          "artist": "IU",
-          "song_title": "Love poem"
-        },
-        {
-          "track_id": null,
-          "artist": "IU",
-          "song_title": "팔레트"
-        },
-        {
-          "track_id": null,
-          "artist": "IU",
-          "song_title": "Celebrity"
-        }
-      ],
+      "tracks": [],
+      "replay_available": false,
       "context": {
         "pattern_key": "iu",
         "count": 4,
         "total_in_month": 7,
         "share": 0.5714,
         "score": 0.5114,
+        "unresolved_track_moment_count": 4,
         "dominant_time_band": "NIGHT",
         "dominant_time_ratio": 1.0,
         "top_location": "집",
         "repeated_memo_keywords": []
       },
-      "content_hash": "eaf9bb5f66da0970d3b4e48fa9066750d382fc99bfce48420b62572fe7633041",
+      "content_hash": "7b66e667e22f9c536d964fbf22cb368bf82682eb37a23d0231dd4c1bdeb62822",
       "sync_action": "CREATE"
     }
-  ]
+  ],
+  "scope": null,
+  "deactivated_memory_ids": []
 }
