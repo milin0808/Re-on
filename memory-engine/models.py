@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 import re
 from typing import Any
 
-ENGINE_VERSION = "0.3.0"
+ENGINE_VERSION = "0.4.0"
 ALGORITHM = "rules-v2"
 ANALYSIS_TIMEZONE_NAME = "Asia/Seoul"
 # Korean MVP: fixed UTC+09:00, also works on Windows without a tzdata install.

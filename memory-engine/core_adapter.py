@@ -31,13 +31,28 @@ def normalize_artist(artist: str | None, channel_title: str | None = None) -> st
 
 
 class CoreMusicMetadata(BaseModel):
-    """Spring Boot's existing MusicResolveResponse fields."""
+    """API v0.4 music fields and the existing MusicResolveResponse fields."""
 
     model_config = ConfigDict(extra="forbid")
-    videoId: VideoId
+    videoId: VideoId | None = None
     title: NonBlank
-    channelTitle: NonBlank
+    artist: NonBlank | None = None
+    channelTitle: NonBlank | None = None
     thumbnailUrl: str | None = None
+    originalUrl: str | None = None
+
+
+class CoreLocation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    latitude: float = Field(strict=True, ge=-90, le=90, allow_inf_nan=False)
+    longitude: float = Field(strict=True, ge=-180, le=180, allow_inf_nan=False)
+
+    def label(self) -> str:
+        # Approximate coordinate cells, not a reverse-geocoded venue or a distance radius.
+        lat, lon = round(self.latitude, 3), round(self.longitude, 3)
+        if lat == 0: lat = 0.0
+        if lon == 0: lon = 0.0
+        return f"위도 {lat:.3f}, 경도 {lon:.3f}"
 
 
 class FrontTrack(BaseModel):
@@ -59,14 +74,16 @@ class CoreMomentInput(BaseModel):
     track: FrontTrack | None = None
     artist: NonBlank | None = None
     songTitle: NonBlank | None = None
-    location: str | None = Field(default=None, max_length=255)
+    location: str | CoreLocation | None = None
     memo: str | None = Field(default=None, max_length=2000)
 
     @model_validator(mode="after")
     def music_or_track(self):
         if self.music is None and self.track is None:
             raise ValueError("Moment에는 music 또는 track이 필요합니다.")
-        if self.music and self.track and self.track.videoId:
+        if isinstance(self.location, str) and len(self.location) > 255:
+            raise ValueError("위치 문자열은 최대 255자입니다.")
+        if self.music and self.music.videoId and self.track and self.track.videoId:
             if self.music.videoId != self.track.videoId:
                 raise ValueError("music.videoId와 track.videoId가 서로 다릅니다.")
         return self
@@ -93,14 +110,15 @@ def adapt_core_request(payload: CoreAnalysisRequest) -> AnalysisRequest:
             raise ValueError("Core가 인증된 userId를 요청 또는 Moment에 채워야 합니다.")
         if owner is not None and user_id != owner:
             raise ValueError("Moment.userId와 요청 사용자 ID가 서로 다릅니다.")
-        explicit_artist = m.artist or (m.track.artist if m.track else None)
+        explicit_artist = m.artist or (m.track.artist if m.track else None) or (m.music.artist if m.music else None)
         artist = normalize_artist(explicit_artist, m.music.channelTitle if m.music else None)
         song_title = m.songTitle or (m.track.title if m.track else m.music.title)
-        track_id = m.music.videoId if m.music else m.track.videoId
+        track_id = (m.music.videoId if m.music else None) or (m.track.videoId if m.track else None)
+        location = m.location.label() if isinstance(m.location, CoreLocation) else m.location
         normalized.append(MomentInput(
             moment_id=m.momentId, user_id=user_id, artist=artist,
             song_title=song_title, recorded_at=m.recordedAt,
-            track_id=track_id, location=m.location, memo=m.memo,
+            track_id=track_id, location=location, memo=m.memo,
         ))
     return AnalysisRequest(moments=normalized, existing_memories=payload.existing_memories,
                            scope=payload.scope)

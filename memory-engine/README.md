@@ -1,9 +1,9 @@
-# 🎧 RE:ON — Memory Engine v0.3.0
+# 🎧 RE:ON — Memory Engine v0.4.0
 
 Moment의 아티스트·시간·위치·메모를 분석하는 규칙 기반 FastAPI 서비스다.
-DB 저장과 사용자 인증은 Core Backend가 담당하며, 엔진은 분석 결과만 반환한다.
-현재 Core 브랜치에는 음악 조회만 구현되어 있다. 아래 Moment 전달·Memory 저장 계약은
-이번 엔진 패치의 계약이며, 구현된 Core Moment CRUD API를 뜻하지 않는다.
+엔진은 분석 결과만 반환한다. 김민정 담당의 Spring Boot Memory 모듈이 DB 저장·갱신·비활성화,
+revision 검증과 공개 Memory API 3개를 처리한다. 사용자 인증·Moment CRUD는 최승환 담당이다.
+Spring 모듈의 연결 방법은 `../backend/MEMORY_IMPLEMENTATION.md`에 있다.
 
 ## 실행
 
@@ -38,6 +38,9 @@ CLI 데모는 `python main.py`, API 예제 호출은 서버 실행 후 `python t
 - 프론트 `id`, `createdAt`, `track.title`, `track.artist`, `track.albumCoverUrl`을 받는다.
   Core는 인증된 사용자 ID를 요청의 `userId` 또는 각 Moment의 `userId`로 채운다.
 - Core `music`은 기존 `videoId`, `title`, `channelTitle`, `thumbnailUrl`을 그대로 받는다.
+  API 명세 v0.4의 `music.artist`, `originalUrl`도 받으며 channelTitle 없이 전달할 수 있다.
+  좌표형 `location`은 위도·경도를 소수점 셋째 자리로 반올림해 같은 셀끼리 분석한다.
+  좌표를 실제 장소명이나 정확한 거리로 해석하지 않는다. 기존 문자열 위치도 계속 지원한다.
 - `artist`를 별도의 별칭 사전으로 바꾸지 않는다. 전달된 표기를 유지하며, 공통 분석 단계에서
   Unicode NFKC·대소문자·공백 차이만 비교용으로 정규화한다.
   `아이유`와 `IU`, `NCT127`과 `NCT 127`은 별개의 표기다. 같은 아티스트를 묶으려면
@@ -95,9 +98,10 @@ Core는 `X-Service-Token` 헤더를 보낸다. 잘못된 요청 토큰은 401,
 
 ## 검증
 
-기존 테스트 42개 + 회귀 테스트 18개, 총 **60개**.
+기존 테스트 60개 + API v0.4 계약 테스트 7개, 총 **67개**.
 시간 변환, 프론트/Core 입력, 아티스트 미확정, 토큰 예외, 잘못된 ID,
 곡 ID 중복, 범위별 비활성화와 재활성화를 검사한다.
 
-Google 로그인, Moment CRUD, DB 저장·조회, YouTube OAuth/Playlist는 Core 담당이며
-실제 서비스 통합은 해당 기능 구현 후 검증해야 한다.
+Google 로그인, Moment CRUD, YouTube OAuth/Playlist는 최승환 담당이다.
+Memory DB 처리와 공개 API는 이번 Spring 모듈에 구현되어 있다.
+실제 사용자 인증 및 실제 Moment 테이블과의 최종 통합은 해당 기능 구현 후 검증한다.

@@ -9,7 +9,7 @@
     "unknown_artist_moments": 0,
     "unresolved_track_moments": 20,
     "analysis_timezone": "Asia/Seoul",
-    "engine_version": "0.3.0",
+    "engine_version": "0.4.0",
     "algorithm": "rules-v2"
   },
   "memories": [
